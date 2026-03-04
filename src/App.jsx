@@ -151,7 +151,7 @@ const AlgorithmicDonut = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none mix-blend-screen" />;
 };
 
-// --- Component: Gold Trend Chart (手机端防拥挤优化版) ---
+// --- Component: Gold Trend Chart (带极值显示版) ---
 const GoldTrendChart = () => {
   const chartRef = useRef(null);
   
@@ -182,14 +182,19 @@ const GoldTrendChart = () => {
 
   if (validData.length === 0) return null;
 
-  // 动态计算 Y 轴极值
+  // 动态计算极值和索引
   const dataMin = Math.min(...prices);
   const dataMax = Math.max(...prices);
-  const padding = (dataMax - dataMin) * 0.15 || 1; 
+  const minIndex = prices.indexOf(dataMin);
+  const maxIndex = prices.indexOf(dataMax);
+  
+  const padding = (dataMax - dataMin) * 0.2 || 1; // 增加一点内边距让文字有空间
   const minPrice = dataMin - padding;
   const maxPrice = dataMax + padding;
 
   const currentPrice = prices[prices.length - 1].toFixed(2);
+  // 获取最后一个数据的时间点，用来显示收盘时间
+  const closingTime = validData[validData.length - 1].time; 
 
   const chartWidth = 500; 
   const chartHeight = 150;
@@ -205,20 +210,22 @@ const GoldTrendChart = () => {
     return `M ${points}`;
   };
 
-  // 手机端智能计算：保证最多只显示约 5 个时间标签
   const mobileLabelStep = Math.max(1, Math.ceil(validData.length / 5));
 
   return (
     <div ref={chartRef} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-md relative overflow-hidden flex flex-col justify-between group h-auto min-h-[300px]">
       <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-[#FFD700] to-transparent rounded-bl-full opacity-5 group-hover:opacity-15 transition-opacity blur-2xl pointer-events-none"></div>
       
-      {/* 头部：Gold Trend. 和 ￥ 符号价格 */}
-      <div className="flex justify-between items-center z-10 w-full mb-6">
-        <h3 className="text-2xl font-inter font-bold text-white group-hover:text-[#FFD700] transition-colors">Gold Trend.</h3>
-        <span className="font-mono text-xl md:text-2xl font-black text-[#FFD700] mix-blend-screen leading-none">￥{currentPrice}</span>
+      {/* 头部：Gold Trend. 和 ￥ 符号价格 + 15:30 收盘描述 */}
+      <div className="flex justify-between items-start z-10 w-full mb-6">
+        <h3 className="text-2xl font-inter font-bold text-white group-hover:text-[#FFD700] transition-colors mt-1">Gold Trend.</h3>
+        <div className="text-right">
+          <span className="font-mono text-xl md:text-2xl font-black text-[#FFD700] mix-blend-screen leading-none block">￥{currentPrice}</span>
+          <span className="font-mono text-[10px] text-[#FFD700]/70 block mt-1">({closingTime} 收盘价格)</span>
+        </div>
       </div>
 
-      {/* SVG 图表区 */}
+      {/* SVG 图表区：强制拉伸铺满，增加最高最低点标示 */}
       <div className="w-full relative flex items-center justify-center h-[150px] md:h-[200px]">
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full mix-blend-screen opacity-90 overflow-visible">
           <line x1="0" y1="37.5" x2="500" y2="37.5" stroke="rgba(255,184,0,0.05)" strokeWidth="0.5" />
@@ -232,15 +239,39 @@ const GoldTrendChart = () => {
              const x = (i / (validData.length - 1)) * chartWidth;
              const y = chartHeight - ((Number(d.price) - minPrice) / (maxPrice - minPrice)) * chartHeight;
              const isLast = i === validData.length - 1;
+             const isMax = i === maxIndex;
+             const isMin = i === minIndex;
+             
+             // 边缘文字防碰撞：如果是第一个点向右对齐，最后一个点向左对齐，中间的居中
+             let textAnchor = "middle";
+             if (i === 0) textAnchor = "start";
+             if (i === validData.length - 1) textAnchor = "end";
 
              return (
-               <circle key={i} cx={x} cy={y} r={isLast ? 3.5 : 2} fill={isLast ? "#FFD700" : "rgba(255,255,255,0.4)"} className="transition-all duration-300" />
+               <g key={i}>
+                 {/* 渲染数据点：最后一个点、最高点、最低点高亮显示 */}
+                 <circle cx={x} cy={y} r={isLast || isMax || isMin ? 3.5 : 2} fill={isLast || isMax || isMin ? "#FFD700" : "rgba(255,255,255,0.3)"} className="transition-all duration-300" />
+                 
+                 {/* 渲染最高点数值 */}
+                 {isMax && (
+                   <text x={x} y={y - 12} fill="#FFD700" fontSize="11" fontFamily="JetBrains Mono, monospace" textAnchor={textAnchor} fontWeight="bold" className="drop-shadow-md">
+                     {d.price}
+                   </text>
+                 )}
+
+                 {/* 渲染最低点数值 */}
+                 {isMin && !isMax && (
+                   <text x={x} y={y + 18} fill="#FFD700" fontSize="11" fontFamily="JetBrains Mono, monospace" textAnchor={textAnchor} fontWeight="bold" className="drop-shadow-md">
+                     {d.price}
+                   </text>
+                 )}
+               </g>
              );
           })}
         </svg>
       </div>
 
-      {/* 底部时间标签：手机端智能抽取防重叠，电脑端全量显示 */}
+      {/* 底部时间标签 */}
       <div className="w-full flex justify-between text-[9px] sm:text-[10px] md:text-xs text-white/40 font-mono pt-4 mt-6 border-t border-white/10 relative z-10">
         {validData.map((d, i) => {
           const isFirst = i === 0;
@@ -250,7 +281,6 @@ const GoldTrendChart = () => {
           return (
             <span 
               key={i} 
-              // hidden md:block 保证了在手机上只显示抽取的时间点，但在电脑上全显示
               className={`shrink-0 ${showOnMobile ? 'block' : 'hidden md:block'} ${isLast ? 'text-[#FFD700] font-bold' : ''}`}
             >
               {d.time}
@@ -301,7 +331,6 @@ export default function App() {
         {/* --- GOLD TREND CHART AREA --- */}
         <section id="gold-chart" className="max-w-6xl mx-auto w-full px-6 pb-20 relative z-10">
           <GoldTrendChart />
-          {/* 按钮区域已彻底删除 */}
         </section>
 
         {/* --- FOOTER --- */}
