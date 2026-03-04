@@ -143,7 +143,7 @@ const AlgorithmicDonut = () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('touchmove', handleGlobalTouchMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('touchend', handleMouseLeave);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -151,7 +151,7 @@ const AlgorithmicDonut = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none mix-blend-screen" />;
 };
 
-// --- Component: Gold Trend Chart (带极值显示版) ---
+// --- Component: Gold Trend Chart ---
 const GoldTrendChart = () => {
   const chartRef = useRef(null);
   
@@ -188,12 +188,11 @@ const GoldTrendChart = () => {
   const minIndex = prices.indexOf(dataMin);
   const maxIndex = prices.indexOf(dataMax);
   
-  const padding = (dataMax - dataMin) * 0.2 || 1; // 增加一点内边距让文字有空间
+  const padding = (dataMax - dataMin) * 0.2 || 1; 
   const minPrice = dataMin - padding;
   const maxPrice = dataMax + padding;
 
   const currentPrice = prices[prices.length - 1].toFixed(2);
-  // 获取最后一个数据的时间点，用来显示收盘时间
   const closingTime = validData[validData.length - 1].time; 
 
   const chartWidth = 500; 
@@ -216,7 +215,7 @@ const GoldTrendChart = () => {
     <div ref={chartRef} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-md relative overflow-hidden flex flex-col justify-between group h-auto min-h-[300px]">
       <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-[#FFD700] to-transparent rounded-bl-full opacity-5 group-hover:opacity-15 transition-opacity blur-2xl pointer-events-none"></div>
       
-      {/* 头部：Gold Trend. 和 ￥ 符号价格 + 15:30 收盘描述 */}
+      {/* 头部 */}
       <div className="flex justify-between items-start z-10 w-full mb-6">
         <h3 className="text-2xl font-inter font-bold text-white group-hover:text-[#FFD700] transition-colors mt-1">Gold Trend.</h3>
         <div className="text-right">
@@ -225,7 +224,7 @@ const GoldTrendChart = () => {
         </div>
       </div>
 
-      {/* SVG 图表区：强制拉伸铺满，增加最高最低点标示 */}
+      {/* SVG 图表区 */}
       <div className="w-full relative flex items-center justify-center h-[150px] md:h-[200px]">
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full mix-blend-screen opacity-90 overflow-visible">
           <line x1="0" y1="37.5" x2="500" y2="37.5" stroke="rgba(255,184,0,0.05)" strokeWidth="0.5" />
@@ -242,24 +241,20 @@ const GoldTrendChart = () => {
              const isMax = i === maxIndex;
              const isMin = i === minIndex;
              
-             // 边缘文字防碰撞：如果是第一个点向右对齐，最后一个点向左对齐，中间的居中
              let textAnchor = "middle";
              if (i === 0) textAnchor = "start";
              if (i === validData.length - 1) textAnchor = "end";
 
              return (
                <g key={i}>
-                 {/* 渲染数据点：最后一个点、最高点、最低点高亮显示 */}
                  <circle cx={x} cy={y} r={isLast || isMax || isMin ? 3.5 : 2} fill={isLast || isMax || isMin ? "#FFD700" : "rgba(255,255,255,0.3)"} className="transition-all duration-300" />
                  
-                 {/* 渲染最高点数值 */}
                  {isMax && (
                    <text x={x} y={y - 12} fill="#FFD700" fontSize="11" fontFamily="JetBrains Mono, monospace" textAnchor={textAnchor} fontWeight="bold" className="drop-shadow-md">
                      {d.price}
                    </text>
                  )}
 
-                 {/* 渲染最低点数值 */}
                  {isMin && !isMax && (
                    <text x={x} y={y + 18} fill="#FFD700" fontSize="11" fontFamily="JetBrains Mono, monospace" textAnchor={textAnchor} fontWeight="bold" className="drop-shadow-md">
                      {d.price}
@@ -318,8 +313,10 @@ export default function App() {
               SpaceX<br/><span className="text-white [-webkit-text-stroke:0px]">YANG</span>
             </h1>
             
-            <p className="mt-4 text-lg md:text-2xl text-white/80 uppercase tracking-[0.2em] font-bold">
-              Seeking Fortune, <span className="text-[#FFD700]">Avoiding Peril.</span><span className="caret">_</span>
+            {/* 🎯 终极修改点：强制分成独立的上下两行！ */}
+            <p className="mt-4 text-lg md:text-2xl text-white/80 uppercase tracking-[0.2em] font-bold leading-relaxed">
+              <span className="block">Seeking Fortune,</span>
+              <span className="block text-[#FFD700]">Avoiding Peril.<span className="caret">_</span></span>
             </p>
             
             <p className="mt-4 text-xs md:text-sm text-white/50 tracking-[0.1em] font-mono px-4">
