@@ -157,23 +157,14 @@ const GoldTrendChart = () => {
   
   // 草图数据区
   const mockGoldData = [
-    { time: '00:00', price: 1130 },
-    { time: '01:00', price: 1134 },
-    { time: '02:00', price: 1136 },
-    { time: '03:00', price: 1138 },
-    { time: '04:00', price: 1140 },
-    { time: '05:00', price: 1142 },
-    { time: '06:00', price: 1132 },
-    { time: '07:00', price: 1136 },
-    { time: '08:00', price: 1140 },
-    { time: '09:00', price: 1132 },
-    { time: '10:00', price: 1140 },
-    { time: '11:00', price: 1145 },
-    { time: '12:00', price: 1150 },
-    { time: '13:00', price: 1160 },
-    { time: '14:00', price: 1170 },
+    { time: '09:00', price: 1140 },
+    { time: '10:00', price: 1150 },
+    { time: '11:00', price: 1160 },
+    { time: '12:00', price: 1170 },
+    { time: '13:00', price: 1130 },
+    { time: '14:00', price: 1150 },
     { time: '15:00', price: 1160 },
-    { time: '15:30', price: 1150 }, 
+    { time: '15:30', price: 1170 }, 
   ];
 
   // 核心容错引擎
