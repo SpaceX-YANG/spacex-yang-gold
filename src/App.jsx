@@ -64,34 +64,6 @@ const useSmoothMouse = () => {
   return mousePosition;
 };
 
-// --- Component: Magnetic Button ---
-const MagneticButton = ({ children, className, onClick }) => {
-  const ref = useRef(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e) => {
-    const { clientX, clientY } = e;
-    const { width, height, left, top } = ref.current.getBoundingClientRect();
-    const x = clientX - (left + width / 2);
-    const y = clientY - (top + height / 2);
-    setPosition({ x: x * 0.3, y: y * 0.3 });
-  };
-  const handleMouseLeave = () => setPosition({ x: 0, y: 0 });
-
-  return (
-    <button
-      ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={onClick}
-      style={{ transform: `translate(${position.x}px, ${position.y}px)`, transition: 'transform 0.1s ease-out' }}
-      className={`relative px-6 py-3 rounded-full border border-white/20 bg-white/5 backdrop-blur-md hover:border-[#FFD700]/50 transition-colors ${className}`}
-    >
-      {children}
-    </button>
-  );
-};
-
 // --- Component: Algorithmic Donut (修复手机端无法滚动) ---
 const AlgorithmicDonut = () => {
   const canvasRef = useRef(null);
@@ -179,11 +151,11 @@ const AlgorithmicDonut = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none mix-blend-screen" />;
 };
 
-// --- Component: Gold Trend Chart (满铺边界、全量标签、绝不崩溃版) ---
+// --- Component: Gold Trend Chart (手机端防拥挤优化版) ---
 const GoldTrendChart = () => {
   const chartRef = useRef(null);
   
-  // 🌟 草图数据区（无论填多少个，都不会崩溃）
+  // 草图数据区
   const mockGoldData = [
     { time: '00:00', price: 1145 },
     { time: '01:00', price: 1139 },
@@ -204,21 +176,19 @@ const GoldTrendChart = () => {
     { time: '15:30', price: 1153 }, 
   ];
 
-  // 核心容错引擎：自动剔除空数据和错误数据，防止图表消失
+  // 核心容错引擎
   const validData = mockGoldData.filter(d => d && d.time && typeof d.price !== 'undefined' && !isNaN(Number(d.price)));
   const prices = validData.map(d => Number(d.price));
 
-  // 如果数据全错，直接返回空，避免白屏
   if (validData.length === 0) return null;
 
-  // 动态计算 Y 轴极值，保证折线永远在框内居中
+  // 动态计算 Y 轴极值
   const dataMin = Math.min(...prices);
   const dataMax = Math.max(...prices);
   const padding = (dataMax - dataMin) * 0.15 || 1; 
   const minPrice = dataMin - padding;
   const maxPrice = dataMax + padding;
 
-  // 自动提取最后一个有效价格作为右上角展示
   const currentPrice = prices[prices.length - 1].toFixed(2);
 
   const chartWidth = 500; 
@@ -230,22 +200,25 @@ const GoldTrendChart = () => {
       const x = (i / (validData.length - 1)) * chartWidth;
       const y = chartHeight - ((Number(d.price) - minPrice) / (maxPrice - minPrice)) * chartHeight;
       return `${x},${y}`;
-    }).join(' L '); // 强制线性连接
+    }).join(' L '); 
 
     return `M ${points}`;
   };
+
+  // 手机端智能计算：保证最多只显示约 5 个时间标签
+  const mobileLabelStep = Math.max(1, Math.ceil(validData.length / 5));
 
   return (
     <div ref={chartRef} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-md relative overflow-hidden flex flex-col justify-between group h-auto min-h-[300px]">
       <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-[#FFD700] to-transparent rounded-bl-full opacity-5 group-hover:opacity-15 transition-opacity blur-2xl pointer-events-none"></div>
       
-      {/* 彻底极简的头部：Gold Trend. 和 ￥ 符号价格 */}
+      {/* 头部：Gold Trend. 和 ￥ 符号价格 */}
       <div className="flex justify-between items-center z-10 w-full mb-6">
         <h3 className="text-2xl font-inter font-bold text-white group-hover:text-[#FFD700] transition-colors">Gold Trend.</h3>
         <span className="font-mono text-xl md:text-2xl font-black text-[#FFD700] mix-blend-screen leading-none">￥{currentPrice}</span>
       </div>
 
-      {/* SVG 图表区：强制拉伸铺满左右边缘 (preserveAspectRatio="none") */}
+      {/* SVG 图表区 */}
       <div className="w-full relative flex items-center justify-center h-[150px] md:h-[200px]">
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full mix-blend-screen opacity-90 overflow-visible">
           <line x1="0" y1="37.5" x2="500" y2="37.5" stroke="rgba(255,184,0,0.05)" strokeWidth="0.5" />
@@ -267,13 +240,23 @@ const GoldTrendChart = () => {
         </svg>
       </div>
 
-      {/* 底部全量时间标签：解除了之前只显示5个的限制，极小字体防重叠 */}
-      <div className="w-full flex justify-between text-[7px] sm:text-[9px] md:text-xs text-white/40 font-mono pt-4 mt-6 border-t border-white/10 relative z-10">
-        {validData.map((d, i) => (
-          <span key={i} className={`shrink-0 ${i === validData.length - 1 ? 'text-[#FFD700] font-bold' : ''}`}>
-            {d.time}
-          </span>
-        ))}
+      {/* 底部时间标签：手机端智能抽取防重叠，电脑端全量显示 */}
+      <div className="w-full flex justify-between text-[9px] sm:text-[10px] md:text-xs text-white/40 font-mono pt-4 mt-6 border-t border-white/10 relative z-10">
+        {validData.map((d, i) => {
+          const isFirst = i === 0;
+          const isLast = i === validData.length - 1;
+          const showOnMobile = isFirst || isLast || (i % mobileLabelStep === 0);
+
+          return (
+            <span 
+              key={i} 
+              // hidden md:block 保证了在手机上只显示抽取的时间点，但在电脑上全显示
+              className={`shrink-0 ${showOnMobile ? 'block' : 'hidden md:block'} ${isLast ? 'text-[#FFD700] font-bold' : ''}`}
+            >
+              {d.time}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -305,7 +288,6 @@ export default function App() {
               SpaceX<br/><span className="text-white [-webkit-text-stroke:0px]">YANG</span>
             </h1>
             
-            {/* 蓝框要求：趋吉避凶 */}
             <p className="mt-4 text-lg md:text-2xl text-white/80 uppercase tracking-[0.2em] font-bold">
               Seeking Fortune, <span className="text-[#FFD700]">Avoiding Peril.</span><span className="caret">_</span>
             </p>
@@ -317,14 +299,9 @@ export default function App() {
         </section>
 
         {/* --- GOLD TREND CHART AREA --- */}
-        <section id="gold-chart" className="max-w-6xl mx-auto w-full px-6 pb-24 relative z-10">
+        <section id="gold-chart" className="max-w-6xl mx-auto w-full px-6 pb-20 relative z-10">
           <GoldTrendChart />
-          
-          <div className="mt-12 text-center">
-            <MagneticButton onClick={() => alert('Initiating Quantum Gold Analysis...')} className="text-sm md:text-lg font-mono">
-              QUANTIZE MARKET
-            </MagneticButton>
-          </div>
+          {/* 按钮区域已彻底删除 */}
         </section>
 
         {/* --- FOOTER --- */}
